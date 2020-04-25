@@ -10,6 +10,9 @@
   .then( () => {
     const server = express()
 
+    const weekRoutes = require('./routes/index.js')
+    server.use('/api', weekRoutes)
+
     // all routes not handled by express will be handled by next
     server.get('*', (req, res) => {
       return handle(req, res)
