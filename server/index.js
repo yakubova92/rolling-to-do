@@ -3,13 +3,20 @@
  const bodyParser = require('body-parser')
  const graphqlHttp = require('express-graphql')
  const { buildSchema } = require('graphql')
+ const mongoose = require('mongoose')
+
+ require('dotenv').config()
 
  const PORT = process.env.PORT || 3000
  const dev = process.env.NODE_ENV !== 'production'
+ const mongoUser = process.env.MONGO_USER
+ const mongoPassword = process.env.MONGO_PASSWORD
+ const mongoDatabase = process.env.MONGO_DB
+
  const app = next({ dev })
  const handle = app.getRequestHandler()
 
- const events = []
+ const Event = require('./models/event')
 
  app.prepare()
   .then( () => {
@@ -43,17 +50,26 @@
       `),
       rootValue: {
         events: () => {
-          return events
+          return Event.find().then(events => {
+            return events.map(event => {
+              return {...event._doc}
+            })
+          }).catch(err => {
+            throw err
+          })
         },
         createEvent: args => {
-          const event = {
-            _id: Math.random().toString(),
+          const event = new Event({
             title: args.eventInput.title,
             description: args.eventInput.description,
-            date: args.eventInput.date
-          }
-          events.push(event)
-          return event
+            date: new Date(args.eventInput.date)
+          })
+          return event.save().then(result => {
+            return {...result._doc}
+          }).catch(err => {
+            console.log(err)
+            throw err
+          })
         }
       },
       graphiql: true
@@ -64,13 +80,22 @@
       return handle(req, res)
     })
 
-    server.listen(PORT, err => {
-      if (err) {
-        throw err
-      }else {
-        console.log(`Server listening at port ${PORT}`)
-      }
-    })
+    mongoose.connect(
+      `mongodb+srv://${mongoUser}:${mongoPassword}@rolling-nyrqt.mongodb.net/${mongoDatabase}?retryWrites=true&w=majority`
+      ).then(() => {
+        server.listen(PORT, err => {
+          if (err) {
+            throw err
+          }else {
+            console.log(`Server listening at port ${PORT}`)
+          }
+        })
+      }).catch(err => {
+        console.log(err)
+
+      })
+
+
   })
   .catch(ex => {
     console.error(ex.stack)

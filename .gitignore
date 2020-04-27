@@ -3,3 +3,9 @@
 
 # Node
 node_modules
+
+# env
+.env
+
+# Mac Hidden Files
+*.DS_Store
